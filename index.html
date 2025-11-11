@@ -1,1 +1,504 @@
-TEST WEB 01
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NewsGrid — เว็บข่าวตัวอย่าง</title>
+    <meta
+      name="description"
+      content="เทมเพลตเว็บข่าวสวยๆ — ใส่ข้อมูลจาก JSON ได้ง่าย ๆ"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="site-head">
+        <div class="brand">
+          <div class="logo">NG</div>
+          <div>
+            <div class="site-title">NewsGrid</div>
+            <div class="site-sub">
+              เว็บข่าวตัวอย่าง — ดึงข้อมูลจาก JSON ได้ง่ายๆ
+            </div>
+          </div>
+        </div>
+
+        <nav class="controls" aria-label="controls">
+          <div class="search" role="search">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                stroke="currentColor"
+                stroke-width="1.6"
+                d="M21 21l-4.35-4.35"
+              ></path>
+              <circle
+                cx="11"
+                cy="11"
+                r="6"
+                stroke="currentColor"
+                stroke-width="1.6"
+              ></circle>
+            </svg>
+            <input id="searchInput" placeholder="ค้นหาบทความ" />
+          </div>
+          <div
+            class="sm:hidden nav-bar-flex"
+            id="categoryList"
+          ></div>
+        </nav>
+        <button class="menu-toggle sm:hidden">☰</button>
+      </header>
+
+      <!-- Sidebar -->
+      <div class="mobile-sidebar" id="mobileSidebar">
+        <a href="#">หน้าแรก</a>
+        <a href="#">หมวดหมู่</a>
+        <a href="#">เกี่ยวกับเรา</a>
+        <a href="#">ติดต่อ</a>
+      </div>
+      <div class="overlay" id="overlay"></div>
+
+      <!-- <section class="hero">
+        <article class="hero-card" aria-labelledby="hero-headline">
+          <div
+            class="img"
+            id="heroImg"
+            style="
+              background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=60');
+            "
+          ></div>
+          <div class="meta">
+            <div class="kicker" id="heroKicker">เนื้อหาเด่นวันนี้</div>
+            <h1 class="headline" id="hero-headline">
+              หัวข้อข่าวตัวอย่าง — รูปแบบ Hero
+            </h1>
+            <p class="lead" id="heroLead">
+              ฟีเจอร์เด่นของเว็บข่าวตัวอย่างนี้ — สร้างจาก HTML/JS
+              เพียงไฟล์เดียว และรองรับการดึงข้อมูลจาก JSON ภายนอก
+            </p>
+          </div>
+        </article>
+      </section> -->
+
+      <section class="slider" id="slider">
+        <div class="slides" id="slides"></div>
+        <div class="slider-controls" id="sliderDots"></div>
+      </section>
+
+      <main>
+        <div class="grid" id="articlesGrid" aria-live="polite"></div>
+
+        <div class="pagination" id="pagination"></div>
+      </main>
+    </div>
+
+    <!-- Modal -->
+    <div
+      id="modalBackdrop"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal" role="document">
+        <div class="m-header">
+          <div
+            style="
+              width: 76px;
+              height: 56px;
+              background-size: cover;
+              background-position: center;
+              border-radius: 8px;
+            "
+            id="mThumb"
+          ></div>
+          <div>
+            <div class="m-headline" id="mTitle">Title</div>
+            <div style="font-size: 13px; color: var(--muted)" id="mMeta">
+              Author • Date
+            </div>
+          </div>
+          <button class="close-btn" id="closeModal" aria-label="ปิด">✕</button>
+        </div>
+        <div class="m-body" id="mBody">Full article body goes here...</div>
+      </div>
+    </div>
+
+    <script>
+      /*
+      THIS IS A SINGLE-FILE TEMPLATE.
+      Replace the `articlesData` variable below with a fetch() to your JSON endpoint when ready:
+      e.g.
+         fetch('/articles.json').then(r=>r.json()).then(data=>init(data))
+    */
+
+      const articlesData = [
+        {
+          id: 1,
+          title: "ทำไมการลงฉนวนท่อถึงสำคัญในโรงงานอุตสาหกรรม",
+          excerpt:
+            "บทความสรุปการใช้งานฉนวนท่อเพื่อประหยัดพลังงานและป้องกันการกัดกร่อน",
+          body: `<p>ฉนวนท่อช่วยลดการสูญเสียความร้อนและป้องกันการกัดกร่อน... (เนื้อหาเต็ม)</p>`,
+          image:
+            "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1200&q=60",
+          category: "อุตสาหกรรม",
+          author: "Centrotec",
+          date: "2025-11-01",
+        },
+        {
+          id: 2,
+          title: "ผ้าคลุม Robot vs Airbag — ความต่างที่คุณควรรู้",
+          excerpt:
+            "เปรียบเทียบวัสดุและการใช้งานเพื่อการปกป้องและยืดอายุอุปกรณ์",
+          body: `<p>ผ้าคลุม Robot และ Airbag มีหน้าที่ต่างกัน... (เนื้อหาเต็ม)</p>`,
+          image:
+            "https://images.unsplash.com/photo-1501426026826-31c667bdf23d?auto=format&fit=crop&w=1200&q=60",
+          category: "เทคโนโลยี",
+          author: "Centrotec",
+          date: "2025-10-28",
+        },
+        {
+          id: 3,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+        {
+          id: 4,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+        {
+          id: 5,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+        {
+          id: 6,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+        {
+          id: 7,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+        {
+          id: 8,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+        {
+          id: 9,
+          title: "5 วิธีประหยัดพลังงานในอาคารสำนักงาน",
+          excerpt: "เคล็ดลับใช้งานอุปกรณ์อย่างยั่งยืนและลดค่าพลังงาน",
+          body: `<p>เริ่มจากการตรวจสอบระบบ HVAC และการป้องกันความร้อน...</p>`,
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+          category: "สิ่งแวดล้อม",
+          author: "Editor",
+          date: "2025-09-10",
+        },
+      ];
+
+      // Config
+      const PAGE_SIZE = 8;
+      let state = { all: [], filtered: [], page: 1, categories: [] };
+
+      function init(data) {
+        state.all = data.slice();
+        state.categories = Array.from(new Set(data.map((a) => a.category)));
+        state.filtered = state.all.slice();
+        renderCategories();
+        // renderHero();
+        renderArticles();
+        setupSearch();
+      }
+
+      function renderHero() {
+        if (state.all.length === 0) return;
+        const top = state.all[0];
+        document.getElementById("hero-headline").textContent = top.title;
+        document.getElementById("heroLead").textContent = top.excerpt;
+        document.getElementById(
+          "heroImg"
+        ).style.backgroundImage = `url(${top.image})`;
+      }
+
+      function renderCategories() {
+        const wrap = document.getElementById("categoryList");
+        wrap.innerHTML = "";
+        const allChip = document.createElement("button");
+        allChip.className = "chip active";
+        allChip.textContent = "ทั้งหมด";
+        allChip.onclick = () => {
+          document
+            .querySelectorAll(".chip")
+            .forEach((c) => c.classList.remove("active"));
+          allChip.classList.add("active");
+          state.filtered = state.all.slice();
+          state.page = 1;
+          renderArticles();
+        };
+        wrap.appendChild(allChip);
+
+        state.categories.forEach((cat) => {
+          const b = document.createElement("button");
+          b.className = "chip";
+          b.textContent = cat;
+          b.onclick = () => {
+            document
+              .querySelectorAll(".chip")
+              .forEach((c) => c.classList.remove("active"));
+            b.classList.add("active");
+            state.filtered = state.all.filter((x) => x.category === cat);
+            state.page = 1;
+            renderArticles();
+          };
+          wrap.appendChild(b);
+        });
+      }
+
+      function renderArticles() {
+        const grid = document.getElementById("articlesGrid");
+        grid.innerHTML = "";
+        const start = (state.page - 1) * PAGE_SIZE;
+        const pageItems = state.filtered.slice(start, start + PAGE_SIZE);
+        if (pageItems.length === 0) {
+          grid.innerHTML = '<p style="color:var(--muted)">ไม่พบบทความ</p>';
+          renderPagination();
+          return;
+        }
+
+        pageItems.forEach((a) => {
+          const card = document.createElement("article");
+          card.className = "card";
+          card.innerHTML = `
+          <div class="thumb" style="background-image:url('${a.image}')" role="img" aria-label="${a.title}"></div>
+          <div class="body">
+            <h3 class="title">${a.title}</h3>
+            <p class="excerpt">${a.excerpt}</p>
+            <div class="meta-row">
+              <div>${a.author} • ${a.date}</div>
+              <button class="read-btn" data-id="${a.id}">อ่านต่อ</button>
+            </div>
+          </div>`;
+          grid.appendChild(card);
+        });
+
+        // attach read handlers
+        document
+          .querySelectorAll(".read-btn")
+          .forEach((btn) =>
+            btn.addEventListener("click", (e) => openModal(btn.dataset.id))
+          );
+        renderPagination();
+      }
+
+      function renderPagination() {
+        const total = Math.ceil(state.filtered.length / PAGE_SIZE) || 1;
+        const pag = document.getElementById("pagination");
+        pag.innerHTML = "";
+        for (let i = 1; i <= total; i++) {
+          const p = document.createElement("button");
+          p.className = "page" + (i === state.page ? " active" : "");
+          p.textContent = i;
+          p.onclick = () => {
+            state.page = i;
+            renderArticles();
+          };
+          pag.appendChild(p);
+        }
+      }
+
+      function openModal(id) {
+        const article = state.all.find((a) => String(a.id) === String(id));
+        if (!article) return;
+        document.getElementById("mTitle").textContent = article.title;
+        document.getElementById(
+          "mThumb"
+        ).style.backgroundImage = `url(${article.image})`;
+        document.getElementById(
+          "mMeta"
+        ).textContent = `${article.author} • ${article.date}`;
+        document.getElementById("mBody").innerHTML = article.body;
+        const mb = document.getElementById("modalBackdrop");
+        mb.style.display = "flex";
+      }
+      function closeModal() {
+        document.getElementById("modalBackdrop").style.display = "none";
+      }
+      document
+        .getElementById("closeModal")
+        .addEventListener("click", closeModal);
+      document
+        .getElementById("modalBackdrop")
+        .addEventListener("click", (e) => {
+          if (e.target.id === "modalBackdrop") closeModal();
+        });
+
+      function setupSearch() {
+        const inp = document.getElementById("searchInput");
+        let timer;
+        inp.addEventListener("input", () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            const q = inp.value.trim().toLowerCase();
+            if (!q) {
+              state.filtered = state.all.slice();
+              state.page = 1;
+              renderArticles();
+              return;
+            }
+            state.filtered = state.all.filter(
+              (a) =>
+                a.title.toLowerCase().includes(q) ||
+                a.excerpt.toLowerCase().includes(q) ||
+                (a.category || "").toLowerCase().includes(q)
+            );
+            state.page = 1;
+            renderArticles();
+          }, 250);
+        });
+      }
+
+      // Initialize with demo data. Replace this call with fetch(...) when you have JSON endpoint.
+      init(articlesData);
+
+      const articlesDatHero = [
+        {
+          id: 1,
+          title: "ข่าวเด่น: ฉนวนท่อสำคัญแค่ไหน",
+          excerpt: "การลงฉนวนท่อช่วยลดความร้อนในระบบ",
+          image:
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=60",
+        },
+        {
+          id: 2,
+          title: "เทียบผ้าคลุม Robot vs Airbag",
+          excerpt: "วัสดุและการใช้งานต่างกันอย่างไร",
+          image:
+            "https://images.unsplash.com/photo-1501426026826-31c667bdf23d?auto=format&fit=crop&w=1200&q=60",
+        },
+        {
+          id: 3,
+          title: "เคล็ดลับประหยัดพลังงานในอาคาร",
+          excerpt: "เริ่มจากการตรวจสอบระบบ HVAC",
+          image:
+            "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1200&q=60",
+        },
+      ];
+
+      function initSlider(data) {
+        const slides = document.getElementById("slides");
+        const dots = document.getElementById("sliderDots");
+        slides.innerHTML = "";
+        dots.innerHTML = "";
+
+        data.forEach((item, i) => {
+          const slide = document.createElement("div");
+          slide.className = "slide";
+          slide.innerHTML = `
+<div class="img" style="background-image:url('${item.image}')"></div>
+<div class="meta">
+<div class="kicker">เนื้อหาเด่นวันนี้</div>
+<h2 class="headline">${item.title}</h2>
+<p class="lead">${item.excerpt}</p>
+</div>`;
+          slides.appendChild(slide);
+
+          const dot = document.createElement("div");
+          dot.className = "dot" + (i === 0 ? " active" : "");
+          dot.addEventListener("click", () => moveToSlide(i));
+          dots.appendChild(dot);
+        });
+      }
+
+      let currentSlide = 0;
+      function moveToSlide(index) {
+        const slides = document.getElementById("slides");
+        const dots = document.querySelectorAll(".dot");
+        const total = dots.length;
+        currentSlide = (index + total) % total;
+        slides.style.transform = `translateX(-${currentSlide * 100}%)`;
+        dots.forEach((d, i) =>
+          d.classList.toggle("active", i === currentSlide)
+        );
+      }
+
+      function autoSlide() {
+        moveToSlide(currentSlide + 1);
+      }
+      setInterval(autoSlide, 5000);
+
+      initSlider(articlesDatHero);
+
+      // ===== SLIDER SCRIPT =====
+      const slides = document.querySelector(".slides");
+      const slideCount = document.querySelectorAll(".slide").length;
+      let currentIndex = 0;
+
+      function showNextSlide() {
+        currentIndex = (currentIndex + 1) % slideCount;
+        slides.style.transform = `translateX(-${currentIndex * 100}%)`;
+      }
+      setInterval(showNextSlide, 5000);
+
+      // ===== SIDEBAR SCRIPT =====
+      const menuToggle = document.querySelector(".menu-toggle");
+      const sidebar = document.getElementById("mobileSidebar");
+      const overlay = document.getElementById("overlay");
+
+      menuToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+      });
+
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.classList.remove("active");
+      });
+    </script>
+  </body>
+</html>
