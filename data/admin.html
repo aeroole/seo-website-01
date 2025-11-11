@@ -114,19 +114,22 @@
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
     <main class="main-content container">
-      <h3 class="mb-4">🎯 จัดการ Hero Slider</h3>
-      <button class="btn btn-sm btn-primary mb-3" onclick="addHero()">
-        + เพิ่ม Hero
-      </button>
-      <div id="heroList"></div>
-
-      <hr />
-
-      <h3 class="mb-4">📰 จัดการบทความ</h3>
-      <button class="btn btn-sm btn-primary mb-3" onclick="addArticle()">
-        + เพิ่มบทความ
-      </button>
-      <div id="articleList"></div>
+      <div class="row">
+        <div class="col-6">
+          <h3 class="mb-4">🎯 จัดการ Hero Slider</h3>
+          <button class="btn btn-sm btn-primary mb-3" onclick="addHero()">
+            + เพิ่ม Hero
+          </button>
+          <div id="heroList"></div>
+        </div>
+        <div class="col-6">
+          <h3 class="mb-4">📰 จัดการบทความ</h3>
+          <button class="btn btn-sm btn-primary mb-3" onclick="addArticle()">
+            + เพิ่มบทความ
+          </button>
+          <div id="articleList"></div>
+        </div>
+      </div>
     </main>
 
     <script>
@@ -139,82 +142,201 @@
       let heroes = [];
       let articles = [];
 
-      async function loadData() {
-        try {
-          const heroRes = await fetch("sliders.json");
-          heroes = await heroRes.json();
-          renderHeroes();
+      // ----------------------------------------------------
+      // ⚙️ ฟังก์ชันสำหรับส่งข้อมูลไปเซิร์ฟเวอร์ (ต้องมี Backend รองรับ)
+      // ----------------------------------------------------
+      async function saveJsonToServer(data, filename) {
+        // *** ตั้งค่า URL ของ Backend Script ของคุณที่นี่ ***
+        const endpointUrl = "./../api/save_data.php";
 
-          const articleRes = await fetch("articles.json");
-          articles = await articleRes.json();
-          renderArticles();
-        } catch (err) {
-          console.error("โหลดข้อมูลไม่สำเร็จ:", err);
+        try {
+          const response = await fetch(endpointUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ filename: filename, content: data }),
+          });
+
+          if (response.ok) {
+            alert(`💾 บันทึกไฟล์ ${filename} บนเซิร์ฟเวอร์สำเร็จ!`);
+          } else {
+            // อ่านข้อความ Error จาก Server (ถ้า Server ส่งกลับมา)
+            const errorText = await response.text();
+            alert(
+              `❌ เกิดข้อผิดพลาดในการบันทึกไฟล์ ${filename}: ${response.status} ${response.statusText}`
+            );
+            console.error("Server error response:", errorText);
+          }
+        } catch (error) {
+          alert(`❌ ไม่สามารถเชื่อมต่อกับ Server ได้: ${error.message}`);
+          console.error("Network or Fetch Error:", error);
         }
       }
+
+      // ----------------------------------------------------
+      // ⬇️ HERO SLIDER FUNCTIONS ⬇️
+      // ----------------------------------------------------
 
       function renderHeroes() {
         const wrap = document.getElementById("heroList");
         wrap.innerHTML = "";
+
         heroes.forEach((h, i) => {
           const div = document.createElement("div");
           div.className = "list-card";
           div.innerHTML = `
-            <input class="form-control mb-2" placeholder="ชื่อหัวข้อ" value="${h.title}" onchange="heroes[${i}].title=this.value" />
-            <input class="form-control mb-2" placeholder="URL รูปภาพ" value="${h.image}" onchange="heroes[${i}].image=this.value" />
-            <input class="form-control mb-2" placeholder="ลิงก์" value="${h.link}" onchange="heroes[${i}].link=this.value" />
-            <button class="btn btn-sm btn-danger" onclick="deleteHero(${i})">ลบ</button>
-          `;
+              <input class="form-control mb-2" placeholder="id" value="${
+                h.id
+              }" onchange="heroes[${i}].id=this.value" />
+              <input class="form-control mb-2" placeholder="ชื่อหัวข้อ" value="${
+                h.title
+              }" onchange="heroes[${i}].title=this.value" />
+              <input class="form-control mb-2" placeholder="คำอธิบายสั้น" value="${
+                h.excerpt || ""
+              }" onchange="heroes[${i}].excerpt=this.value" />
+              <input class="form-control mb-2" placeholder="URL รูปภาพ" value="${
+                h.image
+              }" onchange="heroes[${i}].image=this.value" />
+              <div class="d-flex justify-content-end">
+                <button class="btn btn-sm btn-danger" onclick="deleteHero(${i})">ลบ</button>
+              </div>
+            `;
           wrap.appendChild(div);
         });
+
+        // ปุ่ม Save (Hero)
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-success mb-3 me-2";
+        saveBtn.textContent = "💾 บันทึก Hero ทั้งหมด";
+        saveBtn.onclick = () => saveJsonToServer(heroes, "sliders.json");
+
+        const heroSection = document.getElementById("heroList").parentElement;
+        // ป้องกันการสร้างปุ่มซ้ำ
+        if (heroSection.querySelector(".btn-success") === null) {
+          heroSection.insertBefore(
+            saveBtn,
+            document.getElementById("heroList")
+          );
+        }
       }
+
+      function addHero() {
+        // เพิ่มข้อมูลใหม่ที่ด้านหน้า (index 0)
+        const maxIdH =
+          heroes.length > 0 ? Math.max(...heroes.map((a) => a.id)) : 0;
+        const newIdH = maxIdH + 1;
+
+        heroes.unshift({
+          id: newIdH,
+          title: "Hero ใหม่",
+          image: "",
+          excerpt: "",
+        });
+        renderHeroes();
+      }
+
+      window.deleteHero = (i) => {
+        if (confirm("ยืนยันการลบ Hero นี้?")) {
+          heroes.splice(i, 1);
+          renderHeroes();
+        }
+      };
+
+      // ----------------------------------------------------
+      // ⬇️ ARTICLE FUNCTIONS ⬇️
+      // ----------------------------------------------------
 
       function renderArticles() {
         const wrap = document.getElementById("articleList");
         wrap.innerHTML = "";
+
+        // เรียงลำดับบทความจาก id มากไปหาน้อย (ล่าสุดอยู่บนสุด)
+        articles.sort((a, b) => b.id - a.id);
+
         articles.forEach((a, i) => {
           const div = document.createElement("div");
           div.className = "list-card";
           div.innerHTML = `
-            <input class="form-control mb-2" placeholder="ชื่อบทความ" value="${a.title}" onchange="articles[${i}].title=this.value" />
-            <input class="form-control mb-2" placeholder="คำอธิบายสั้น" value="${a.excerpt}" onchange="articles[${i}].excerpt=this.value" />
-            <input class="form-control mb-2" placeholder="URL รูปภาพ" value="${a.image}" onchange="articles[${i}].image=this.value" />
-            <input class="form-control mb-2" placeholder="หมวดหมู่" value="${a.category}" onchange="articles[${i}].category=this.value" />
-            <textarea class="form-control mb-2" placeholder="เนื้อหาหลัก" onchange="articles[${i}].body=this.value">${a.body}</textarea>
-            <input class="form-control mb-2" placeholder="ผู้เขียน" value="${a.author}" onchange="articles[${i}].author=this.value" />
-            <button class="btn btn-sm btn-danger" onclick="deleteArticle(${i})">ลบ</button>
-          `;
+              <small class="text-muted d-block mb-1">ID: ${a.id} | วันที่: ${a.date}</small>
+              <input class="form-control mb-2" placeholder="ชื่อบทความ" value="${a.title}" onchange="articles[${i}].title=this.value" />
+              <input class="form-control mb-2" placeholder="คำอธิบายสั้น" value="${a.excerpt}" onchange="articles[${i}].excerpt=this.value" />
+              <input class="form-control mb-2" placeholder="URL รูปภาพ" value="${a.image}" onchange="articles[${i}].image=this.value" />
+              <input class="form-control mb-2" placeholder="หมวดหมู่" value="${a.category}" onchange="articles[${i}].category=this.value" />
+              <textarea class="form-control mb-2" placeholder="เนื้อหาหลัก" onchange="articles[${i}].body=this.value">${a.body}</textarea>
+              <input class="form-control mb-2" placeholder="ผู้เขียน" value="${a.author}" onchange="articles[${i}].author=this.value" />
+              <div class="d-flex justify-content-end">
+                <button class="btn btn-sm btn-danger" onclick="deleteArticle(${i})">ลบ</button>
+              </div>
+            `;
           wrap.appendChild(div);
         });
-      }
 
-      function addHero() {
-        heroes.push({ id: Date.now(), title: "", image: "", link: "#" });
-        renderHeroes();
-      }
+        // ปุ่ม Save (Article)
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-success mb-3 me-2";
+        saveBtn.textContent = "💾 บันทึกบทความทั้งหมด";
+        saveBtn.onclick = () => saveJsonToServer(articles, "articles.json");
 
-      function deleteHero(i) {
-        heroes.splice(i, 1);
-        renderHeroes();
+        const articleSection =
+          document.getElementById("articleList").parentElement;
+        // ป้องกันการสร้างปุ่มซ้ำ
+        if (articleSection.querySelector(".btn-success") === null) {
+          articleSection.insertBefore(
+            saveBtn,
+            document.getElementById("articleList")
+          );
+        }
       }
 
       function addArticle() {
-        articles.push({
-          id: Date.now(),
+        // 1. หา ID สูงสุดปัจจุบัน
+        const maxId =
+          articles.length > 0 ? Math.max(...articles.map((a) => a.id)) : 0;
+        const newId = maxId + 1; // ID ใหม่คือ ID สูงสุด + 1
+
+        // 2. เพิ่มข้อมูลใหม่ที่ด้านหน้า (index 0)
+        articles.unshift({
+          id: newId,
           title: "",
           excerpt: "",
           body: "",
           image: "",
-          category: "",
-          author: "",
+          category: "ทั่วไป",
+          author: "Admin",
           date: new Date().toISOString().split("T")[0],
         });
         renderArticles();
       }
 
-      function deleteArticle(i) {
-        articles.splice(i, 1);
-        renderArticles();
+      window.deleteArticle = (i) => {
+        if (confirm("ยืนยันการลบบทความนี้?")) {
+          articles.splice(i, 1);
+          renderArticles();
+        }
+      };
+
+      // ----------------------------------------------------
+      // ⬇️ INITIAL LOAD ⬇️
+      // ----------------------------------------------------
+
+      async function loadData() {
+        try {
+          const heroRes = await fetch("sliders.json");
+          heroes = await heroRes.json();
+
+          const articleRes = await fetch("articles.json");
+          articles = await articleRes.json();
+
+          renderHeroes();
+          renderArticles();
+        } catch (err) {
+          console.error("โหลดข้อมูลไม่สำเร็จ (ตรวจสอบไฟล์ JSON):", err);
+          heroes = [];
+          articles = [];
+          renderHeroes();
+          renderArticles();
+        }
       }
 
       loadData();
