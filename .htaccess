@@ -1,0 +1,28 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  
+  # 🔑 เพิ่มบรรทัดนี้: กำหนด Base Path ของเว็บไซต์ของคุณ
+  RewriteBase /seo-website-01/ 
+
+  # กำหนดให้เบราว์เซอร์ไม่ต้องแคช (Cache) ไฟล์ HTML
+  <FilesMatch "\.html$">
+    FileETag None
+    Header unset ETag
+    Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+  </FilesMatch>
+
+  # 1. ถ้าไฟล์หรือ Directory นั้นมีอยู่จริง ให้โหลดไฟล์นั้นตามปกติ
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 2. ถ้าหาไฟล์หรือ Directory นั้นไม่เจอ (เช่น /article/123/title)
+  #    ให้ Rewrite (เปลี่ยนเส้นทางภายใน) ไปที่ index.html 
+  #    โดยไม่ต้องสนใจว่าอยู่ Subdirectory ใด
+  RewriteRule ^ article.html [L] 
+
+</IfModule>

@@ -9,7 +9,7 @@
       content="เทมเพลตเว็บข่าวสวยๆ — ใส่ข้อมูลจาก JSON ได้ง่าย ๆ"
     />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="./app.css" />
+    <link rel="stylesheet" href="./../../app.css" />
   </head>
   <body>
     <div class="container">
@@ -189,8 +189,8 @@
       async function loadData() {
         try {
           const [articleRes, sliderRes] = await Promise.all([
-            fetch("./data/articles.json"),
-            fetch("./data/sliders.json"),
+            fetch("./../../data/articles.json"),
+            fetch("./../../data/sliders.json"),
           ]);
           const articlesData = await articleRes.json();
           const articlesDatHero = await sliderRes.json();
@@ -231,9 +231,34 @@
               dots.appendChild(dot);
             });
           }
+          // ฟังก์ชันใหม่: ตรวจสอบ URL เมื่อโหลดหน้าครั้งแรก
+          function checkInitialRoute() {
+            const path = window.location.pathname;
 
+            const articleMatch = path.match(/\/article\/(\d+)\//);
+
+            if (articleMatch) {
+              const id = articleMatch[1];
+
+              renderArticlePage(id);
+
+              history.replaceState(
+                { id: id, page: "article" },
+                document.title,
+                path
+              );
+            } else {
+              renderArticles();
+              updateMetaTags(
+                "NewsGrid — เว็บข่าวตัวอย่าง",
+                "เทมเพลตเว็บข่าวสวยๆ — ใส่ข้อมูลจาก JSON ได้ง่าย ๆ",
+                "/"
+              );
+            }
+          }
           init(articlesData);
           initSlider(articlesDatHero);
+          checkInitialRoute();
         } catch (error) {
           console.error("Error loading data:", error);
           document.getElementById("articlesGrid").innerHTML =
@@ -504,7 +529,7 @@
             <p class="excerpt">${a.excerpt}</p>
             <div class="meta-row">
                 <div>${a.author} • ${a.date}</div>
-                <a href="./article/${a.id}/${slug}" class="read-btn" data-id="${a.id}">อ่านต่อ</a>
+                <a href="/article/${a.id}/${slug}" class="read-btn" data-id="${a.id}">อ่านต่อ</a>
             </div>
         </div>`;
           grid.appendChild(card);
