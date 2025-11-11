@@ -614,7 +614,7 @@ nav.controls {
         width: 100%;
         height: 180px;
     }
-    
+
     .hero-card {
         flex-direction: column
     }
@@ -634,5 +634,10 @@ nav.controls {
 
     .search {
         display: none;
+    }
+
+    .sidebar-search.search {
+        display: block;
+        margin: 0px 15px;
     }
 }

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - จัดการบทความและสไลด์เดอร์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      padding: 30px;
+    }
+    .tab-btn.active {
+      background: #0d6efd;
+      color: #fff;
+    }
+    .tab-btn {
+      border: 1px solid #dee2e6;
+      border-radius: .25rem;
+      padding: 6px 14px;
+      margin-right: 8px;
+      cursor: pointer;
+      background: white;
+    }
+    .form-section {
+      display: none;
+    }
+    .form-section.active {
+      display: block;
+    }
+    textarea.json-preview {
+      width: 100%;
+      height: 250px;
+      font-family: monospace;
+      background: #212529;
+      color: #f8f9fa;
+      border-radius: .25rem;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="mb-4">📰 ระบบจัดการบทความและสไลด์เดอร์</h2>
+
+    <!-- Tabs -->
+    <div class="mb-3">
+      <span class="tab-btn active" id="tabArticles">บทความ</span>
+      <span class="tab-btn" id="tabSlider">Hero Slider</span>
+    </div>
+
+    <!-- บทความ -->
+    <div class="form-section active" id="sectionArticles">
+      <h4>เพิ่ม / แก้ไข บทความ</h4>
+      <form id="articleForm" class="mb-3">
+        <div class="mb-2">
+          <label>หัวข้อ</label>
+          <input type="text" id="articleTitle" class="form-control" required>
+        </div>
+        <div class="mb-2">
+          <label>คำโปรย (excerpt)</label>
+          <input type="text" id="articleExcerpt" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label>หมวดหมู่</label>
+          <input type="text" id="articleCategory" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label>ผู้เขียน</label>
+          <input type="text" id="articleAuthor" class="form-control" value="Editor">
+        </div>
+        <div class="mb-2">
+          <label>วันที่</label>
+          <input type="date" id="articleDate" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label>รูปภาพ (URL)</label>
+          <input type="text" id="articleImage" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label>เนื้อหา (HTML)</label>
+          <textarea id="articleBody" class="form-control" rows="5"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">💾 บันทึกบทความ</button>
+      </form>
+
+      <h5>📋 รายการบทความ</h5>
+      <table class="table table-bordered table-striped" id="articleTable">
+        <thead>
+          <tr>
+            <th>#</th><th>หัวข้อ</th><th>หมวดหมู่</th><th>วันที่</th><th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h5 class="mt-4">📦 JSON Preview</h5>
+      <textarea id="articleJSON" class="json-preview" readonly></textarea>
+    </div>
+
+    <!-- Hero Slider -->
+    <div class="form-section" id="sectionSlider">
+      <h4>จัดการสไลด์เดอร์</h4>
+      <form id="sliderForm" class="mb-3">
+        <div class="mb-2">
+          <label>หัวข้อ</label>
+          <input type="text" id="sliderTitle" class="form-control" required>
+        </div>
+        <div class="mb-2">
+          <label>คำอธิบาย</label>
+          <textarea id="sliderDesc" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-2">
+          <label>รูปภาพ (URL)</label>
+          <input type="text" id="sliderImage" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-success">💾 บันทึกสไลด์</button>
+      </form>
+
+      <table class="table table-bordered table-striped" id="sliderTable">
+        <thead><tr><th>#</th><th>หัวข้อ</th><th>จัดการ</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <h5 class="mt-4">📦 JSON Preview</h5>
+      <textarea id="sliderJSON" class="json-preview" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    // ---- STATE ----
+    let articles = JSON.parse(localStorage.getItem("articles") || "[]");
+    let sliders = JSON.parse(localStorage.getItem("sliders") || "[]");
+    let editIndex = null;
+    let sliderEdit = null;
+
+    // ---- TAB SWITCH ----
+    const tabs = {
+      articles: document.getElementById('tabArticles'),
+      slider: document.getElementById('tabSlider')
+    };
+    const sections = {
+      articles: document.getElementById('sectionArticles'),
+      slider: document.getElementById('sectionSlider')
+    };
+    tabs.articles.onclick = () => {
+      tabs.articles.classList.add("active");
+      tabs.slider.classList.remove("active");
+      sections.articles.classList.add("active");
+      sections.slider.classList.remove("active");
+    };
+    tabs.slider.onclick = () => {
+      tabs.slider.classList.add("active");
+      tabs.articles.classList.remove("active");
+      sections.slider.classList.add("active");
+      sections.articles.classList.remove("active");
+    };
+
+    // ---- ARTICLE ----
+    function renderArticles() {
+      const tbody = document.querySelector("#articleTable tbody");
+      tbody.innerHTML = "";
+      articles.forEach((a, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${a.id}</td>
+          <td>${a.title}</td>
+          <td>${a.category}</td>
+          <td>${a.date}</td>
+          <td>
+            <button class="btn btn-sm btn-warning" onclick="editArticle(${i})">แก้ไข</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteArticle(${i})">ลบ</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("articleJSON").value = JSON.stringify(articles, null, 2);
+      localStorage.setItem("articles", JSON.stringify(articles));
+    }
+
+    document.getElementById("articleForm").onsubmit = (e) => {
+      e.preventDefault();
+      const article = {
+        id: editIndex !== null ? articles[editIndex].id : (articles.length ? Math.max(...articles.map(a=>a.id))+1 : 1),
+        title: articleTitle.value.trim(),
+        excerpt: articleExcerpt.value.trim(),
+        body: articleBody.value.trim(),
+        image: articleImage.value.trim(),
+        category: articleCategory.value.trim(),
+        author: articleAuthor.value.trim(),
+        date: articleDate.value || new Date().toISOString().slice(0,10)
+      };
+      if (editIndex !== null) {
+        articles[editIndex] = article;
+        editIndex = null;
+      } else {
+        articles.push(article);
+      }
+      e.target.reset();
+      renderArticles();
+    };
+
+    window.editArticle = (i) => {
+      const a = articles[i];
+      articleTitle.value = a.title;
+      articleExcerpt.value = a.excerpt;
+      articleBody.value = a.body;
+      articleImage.value = a.image;
+      articleCategory.value = a.category;
+      articleAuthor.value = a.author;
+      articleDate.value = a.date;
+      editIndex = i;
+    };
+
+    window.deleteArticle = (i) => {
+      if (confirm("ลบบทความนี้ใช่ไหม?")) {
+        articles.splice(i, 1);
+        renderArticles();
+      }
+    };
+
+    // ---- SLIDER ----
+    function renderSliders() {
+      const tbody = document.querySelector("#sliderTable tbody");
+      tbody.innerHTML = "";
+      sliders.forEach((s, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${s.title}</td>
+          <td>
+            <button class="btn btn-sm btn-warning" onclick="editSlider(${i})">แก้ไข</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSlider(${i})">ลบ</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("sliderJSON").value = JSON.stringify(sliders, null, 2);
+      localStorage.setItem("sliders", JSON.stringify(sliders));
+    }
+
+    document.getElementById("sliderForm").onsubmit = (e) => {
+      e.preventDefault();
+      const slide = {
+        title: sliderTitle.value.trim(),
+        desc: sliderDesc.value.trim(),
+        image: sliderImage.value.trim(),
+      };
+      if (sliderEdit !== null) {
+        sliders[sliderEdit] = slide;
+        sliderEdit = null;
+      } else {
+        sliders.push(slide);
+      }
+      e.target.reset();
+      renderSliders();
+    };
+
+    window.editSlider = (i) => {
+      const s = sliders[i];
+      sliderTitle.value = s.title;
+      sliderDesc.value = s.desc;
+      sliderImage.value = s.image;
+      sliderEdit = i;
+    };
+
+    window.deleteSlider = (i) => {
+      if (confirm("ลบสไลด์นี้ใช่ไหม?")) {
+        sliders.splice(i, 1);
+        renderSliders();
+      }
+    };
+
+    renderArticles();
+    renderSliders();
+  </script>
+</body>
+</html>
